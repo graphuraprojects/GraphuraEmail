@@ -31,7 +31,7 @@ function AdminAuth({ onLogin }) {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('userEmail', response.data.email);
       localStorage.setItem('userRole', response.data.role);
-      onLogin(response.data);
+      onLogin(response.data, '/admin');
     } catch (err) {
       setError(err.response?.data?.error || 'Authentication failed');
     } finally {

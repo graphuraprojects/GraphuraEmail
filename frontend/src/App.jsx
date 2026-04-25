@@ -76,7 +76,7 @@ function App() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
-  const handleLogin = (data) => {
+  const handleLogin = (data, redirectTo) => {
     localStorage.setItem('token', data.token);
     localStorage.setItem('userEmail', data.email);
     localStorage.setItem('userRole', data.role);
@@ -84,7 +84,9 @@ function App() {
     setUserEmail(data.email);
     setUserRole(data.role);
 
-    if (data.role === 'admin') {
+    if (redirectTo) {
+      navigate(redirectTo);
+    } else if (data.role === 'admin') {
       navigate('/admin');
     } else {
       navigate('/dashboard');
@@ -119,10 +121,12 @@ function App() {
       }
     } else if (token && publicPaths.includes(location.pathname)) {
       // Redirect based on role if logged in but on a public page
-      if (userRole === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard');
+      if (['/login', '/register', '/admin/login'].includes(location.pathname)) {
+        if (userRole === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
       }
     }
   }, [token, location.pathname, navigate, userRole]);
