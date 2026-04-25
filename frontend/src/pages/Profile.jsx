@@ -7,7 +7,7 @@ import {
   BadgeCheck, Clock, Hash
 } from 'lucide-react';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = `${import.meta.env.VITE_API_URL}/api`;
 
 function Profile({ onBack }) {
   const [profileData, setProfileData] = useState(null);

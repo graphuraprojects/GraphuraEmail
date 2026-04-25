@@ -120,13 +120,11 @@ function App() {
         navigate('/login');
       }
     } else if (token && publicPaths.includes(location.pathname)) {
-      // Redirect based on role if logged in but on a public page
-      if (['/login', '/register', '/admin/login'].includes(location.pathname)) {
-        if (userRole === 'admin') {
-          navigate('/admin');
-        } else {
-          navigate('/dashboard');
-        }
+      // Only auto-redirect to dashboard/admin if manually visiting login pages while already logged in
+      if (userRole === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
       }
     }
   }, [token, location.pathname, navigate, userRole]);

@@ -147,7 +147,7 @@ function AdminDashboard({ token }) {
     e.preventDefault();
     try {
       setLoading(true);
-      await axios.post('http://localhost:5000/api/auth/register', newUser, {
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/register`, newUser, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setIsAddModalOpen(false);

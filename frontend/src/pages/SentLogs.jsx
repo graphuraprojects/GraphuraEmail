@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { List, Eye, EyeOff, Calendar, Users, FileText, Trash2, RotateCcw, AlertCircle } from 'lucide-react';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = `${import.meta.env.VITE_API_URL}/api`;
 
 function SentLogs({ token, isTrash = false }) {
   const [logs, setLogs] = useState([]);

@@ -10,7 +10,11 @@ const { SESClient, SendEmailCommand } = require("@aws-sdk/client-ses");
 dotenv.config();
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'https://mail.graphura.in', /\.vercel\.app$/],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 // MongoDB connection
