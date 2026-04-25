@@ -1,12 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Mail, Lock, LogIn, UserPlus, Loader2, AlertCircle, Shield, Server, Cloud, Database, Wifi, Code, Globe, Cpu, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const API_URL = `${import.meta.env.VITE_API_URL}/api/auth`;
 
-function Auth({ onLogin }) {
+function Auth({ onLogin, token }) {
   const [isLogin, setIsLogin] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (token) {
+      navigate('/dashboard');
+    }
+  }, [token, navigate]);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');

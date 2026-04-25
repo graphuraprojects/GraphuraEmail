@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Mail, Lock, LogIn, Loader2, AlertCircle, Shield, ArrowRight, Server, Cloud, Database, Wifi, Code, Globe, Cpu, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const API_URL = `${import.meta.env.VITE_API_URL}/api/auth`;
 
-function AdminAuth({ onLogin }) {
+function AdminAuth({ onLogin, token }) {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -13,6 +13,13 @@ function AdminAuth({ onLogin }) {
   const [error, setError] = useState('');
   const [adminCode, setAdminCode] = useState('');
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (token) {
+      navigate('/admin');
+    }
+  }, [token, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

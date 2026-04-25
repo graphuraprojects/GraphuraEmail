@@ -119,13 +119,6 @@ function App() {
       } else {
         navigate('/login');
       }
-    } else if (token && publicPaths.includes(location.pathname)) {
-      // Only auto-redirect to dashboard/admin if manually visiting login pages while already logged in
-      if (userRole === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard');
-      }
     }
   }, [token, location.pathname, navigate, userRole]);
 
@@ -285,11 +278,11 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/login" element={<Auth onLogin={handleLogin} />} />
-      <Route path="/register" element={<Auth onLogin={handleLogin} />} />
+      <Route path="/login" element={<Auth onLogin={handleLogin} token={token} />} />
+      <Route path="/register" element={<Auth onLogin={handleLogin} token={token} />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/admin/login" element={<AdminAuth onLogin={handleLogin} />} />
+      <Route path="/admin/login" element={<AdminAuth onLogin={handleLogin} token={token} />} />
       <Route path="*" element={<Navigate to="/login" />} />
     </Routes>
   );
