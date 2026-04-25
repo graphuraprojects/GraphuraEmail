@@ -23,9 +23,8 @@ function Auth({ onLogin, token }) {
   const [secretKey, setSecretKey] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
 
-  React.useEffect(() => {
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const impToken = params.get('impersonate_token');
     const impEmail = params.get('email');
