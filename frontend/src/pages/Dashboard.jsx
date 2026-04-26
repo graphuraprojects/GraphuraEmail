@@ -106,23 +106,32 @@ function ComposeMail({ token, onSent }) {
   };
 
   const addTag = (val) => {
+    if (!val.trim()) return;
     const emails = val.split(/[,\s]+/).filter(e => e.trim().includes('@'));
     const newTags = [...recipientTags];
     let added = false;
     emails.forEach(email => {
       const clean = email.trim();
-      if (clean && !newTags.includes(clean)) { newTags.push(clean); added = true; }
+      if (clean && !newTags.includes(clean)) {
+        newTags.push(clean);
+        added = true;
+      }
     });
-    if (added) { setRecipientTags(newTags); setInputValue(''); }
-    else if (val.endsWith(',') || val.endsWith(' ')) setInputValue('');
+
+    if (added) {
+      setRecipientTags(newTags);
+    }
+    setInputValue('');
   };
 
-  const removeTag = (index) => setRecipientTags(recipientTags.filter((_, i) => i !== index));
+  const removeTag = (index) => {
+    setRecipientTags(recipientTags.filter((_, i) => i !== index));
+  };
 
   const handleSend = async (e) => {
     e.preventDefault();
     if (recipientTags.length === 0 || !subject || !body) {
-      setStatus({ type: 'error', message: 'All fields are required.' });
+      setStatus({ type: 'error', message: 'At least one recipient, subject, and body are required.' });
       return;
     }
     if (isScheduled && !scheduledTime) {
@@ -133,8 +142,12 @@ function ComposeMail({ token, onSent }) {
     setLoading(true);
     setStatus({ type: '', message: '' });
 
-    const styledBody = `<div style="font-family: ${selectedFont}; font-size: ${fontSize}px; line-height: 1.6; color: #111827;">${body}</div>`;
-    const payload = { recipients: recipientTags, subject, body: styledBody };
+    const styledBody = `<div style="font-family: ${selectedFont}; font-size: ${fontSize}px; line-height: 1.6; color: #1e293b;">${body}</div>`;
+    const payload = { 
+      recipients: recipientTags, 
+      subject, 
+      body: styledBody 
+    };
     const endpoint = isScheduled ? '/schedule-email' : '/send-emails';
     if (isScheduled) payload.scheduledAt = scheduledTime;
 
@@ -195,12 +208,20 @@ function ComposeMail({ token, onSent }) {
                 ))}
                 <input
                   type="text" value={inputValue}
-                  onChange={(e) => { setInputValue(e.target.value); if (e.target.value.includes(',') || e.target.value.includes(' ')) addTag(e.target.value); }}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ',' || e.key === ' ') {
+                      e.preventDefault();
+                      if (inputValue.trim()) addTag(inputValue);
+                    }
+                  }}
+                  onBlur={() => { if (inputValue.trim()) addTag(inputValue); }}
                   placeholder={recipientTags.length === 0 ? "Add recipients..." : ""}
                   style={headerInputStyle}
                 />
               </div>
             </div>
+
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
               <span style={inputLabelStyle}>Subject:</span>
               <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject" style={headerInputStyle} />
@@ -261,7 +282,7 @@ function ComposeMail({ token, onSent }) {
                   type="datetime-local"
                   value={scheduledTime}
                   onChange={(e) => setScheduledTime(e.target.value)}
-                  style={{ border: '1px solid #cbd5e1', borderRadius: '6px', padding: '0.4rem 0.8rem', fontSize: '0.85rem', fontWeight: 600, outline: 'none' }}
+                  style={{ border: '1px solid #cbd5e1', borderRadius: '6px', padding: '0.4rem 0.8rem', fontSize: '0.85rem', fontWeight: 600, outline: 'none', color: '#1e293b' }}
                 />
               </div>
             )}
@@ -293,6 +314,7 @@ function ComposeMail({ token, onSent }) {
         .template-item:hover { background: #f3f4f6; color: #6366f1 !important; }
         .size-btn { background: transparent; border: none; color: #64748b; cursor: pointer; display: flex; align-items: center; padding: 2px; }
         [contenteditable]:empty:before { content: attr(placeholder); color: #94a3b8; pointer-events: none; }
+        [contenteditable] { color: #1e293b !important; }
         .send-main { background: #111827; color: white; padding: 0.75rem 2.5rem; border-radius: 0.6rem; font-weight: 700; border: none; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.2s; }
         .send-main:hover { background: #000; transform: translateY(-1px); }
         @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -303,8 +325,8 @@ function ComposeMail({ token, onSent }) {
 
 const templateHeaderStyle = { padding: '0.75rem 1rem', background: '#f9fafb', borderBottom: '1px solid #f3f4f6', fontSize: '0.7rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase' };
 const templateItemStyle = { padding: '0.85rem 1rem', fontSize: '0.9rem', fontWeight: 600, color: '#1e293b', cursor: 'pointer', borderBottom: '1px solid #f3f4f6', transition: 'all 0.2s' };
-const inputLabelStyle = { minWidth: '60px', fontSize: '0.85rem', fontWeight: 600, color: '#6b7280' };
-const headerInputStyle = { border: 'none', outline: 'none', flex: 1, fontSize: '0.9rem', fontWeight: 500, background: 'transparent' };
+const inputLabelStyle = { minWidth: '60px', fontSize: '0.85rem', fontWeight: 600, color: '#64748b' };
+const headerInputStyle = { border: 'none', outline: 'none', flex: 1, fontSize: '0.9rem', fontWeight: 500, background: 'transparent', color: '#1e293b' };
 const chipStyle = { background: '#f3f4f6', padding: '4px 10px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid #e5e7eb' };
 const toolbarContainerStyle = { background: '#f9fafb', padding: '0.75rem 1.5rem', borderBottom: '1px solid #f3f4f6', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between' };
 const dividerStyle = { width: '1px', height: '20px', background: '#e5e7eb', margin: '0 8px' };

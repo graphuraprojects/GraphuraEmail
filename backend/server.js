@@ -674,25 +674,30 @@ app.post('/api/admin/settings', adminAuth, async (req, res) => {
 app.get('/api/ping', (req, res) => res.json({ status: 'alive' }));
 
 app.post('/api/schedule-email', auth, async (req, res) => {
-  const { recipients, subject, body, scheduledAt } = req.body;
-  if (!recipients || !Array.isArray(recipients) || recipients.length === 0) return res.status(400).json({ error: 'Recipients required' });
-  if (!scheduledAt) return res.status(400).json({ error: 'Scheduled date required' });
-
   try {
+    const { recipients, subject, body, scheduledAt } = req.body;
+    if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+      return res.status(400).json({ error: 'Recipients required' });
+    }
+    if (!scheduledAt) {
+      return res.status(400).json({ error: 'Scheduled date required' });
+    }
+
     const user = await User.findById(req.userId);
+    if (!user) return res.status(401).json({ error: 'Session invalid' });
+
     const emailSize = Buffer.byteLength((subject || '') + (body || ''), 'utf8') * recipients.length;
 
     // Skip limits for admins
     if (req.userRole !== 'admin') {
-      // 1. Total Storage Limit Check
+      // 1. Storage Limit Check
       const logs = await EmailLog.find({ sentBy: req.userId, status: 'success' });
       const totalUsed = logs.reduce((acc, log) => acc + (log.size || 0), 0);
-
       if (totalUsed + emailSize > user.storageLimit) {
         return res.status(403).json({ error: `Storage limit exceeded.` });
       }
 
-      // 2. Daily Limit Check (250/24h)
+      // 2. Daily Limit Check
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
       const sentRecently = await EmailLog.countDocuments({
         sentBy: req.userId,
@@ -701,11 +706,18 @@ app.post('/api/schedule-email', auth, async (req, res) => {
       });
 
       if (sentRecently + recipients.length > (user.dailyLimit || 250)) {
-        return res.status(403).json({ error: `Daily limit (${user.dailyLimit || 250}) reached. Sent in last 24h: ${sentRecently}.` });
+        return res.status(403).json({ error: `Daily limit reached. Sent in last 24h: ${sentRecently}.` });
       }
     }
 
-    const scheduled = new ScheduledEmail({ recipients, subject, body, scheduledAt: new Date(scheduledAt), sentBy: req.userId });
+    const scheduled = new ScheduledEmail({ 
+      recipients, 
+      subject, 
+      body, 
+      scheduledAt: new Date(scheduledAt), 
+      sentBy: req.userId 
+    });
+    
     await scheduled.save();
     res.status(200).json({ message: 'Email scheduled', data: scheduled });
   } catch (error) {
@@ -714,7 +726,10 @@ app.post('/api/schedule-email', auth, async (req, res) => {
 });
 
 app.post('/api/send-emails', auth, async (req, res) => {
-  console.log('--- Incoming Send Request ---');
+  console.log('\n**********************************************');
+  console.log('*** NEW PRIVACY-LOGIC SENDING STARTED ***');
+  console.log('**********************************************\n');
+  
   const { recipients, subject, body } = req.body;
 
   if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
@@ -760,46 +775,60 @@ app.post('/api/send-emails', auth, async (req, res) => {
       }
     }
 
-    console.log(`Attempting to send email via ${mailGateway.type}...`);
+    console.log(`\n--- [BATCH START: ${new Date().toLocaleTimeString()}] ---`);
+    console.log(`Total Recipients to process: ${recipients.length}`);
     const sender = await getSenderSettings();
-    let response;
     let messageId = 'N/A';
+    let successCount = 0;
 
-    if (mailGateway.type === 'aws') {
-      const command = new SendEmailCommand({
-        Source: sender.name ? `${sender.name} <${sender.email}>` : sender.email,
-        Destination: { ToAddresses: recipients },
-        Message: {
-          Subject: { Data: subject || 'No Subject' },
-          Body: { Html: { Data: body || '<p>No content</p>' } }
+    // Strict Loop for Individual Delivery
+    for (let i = 0; i < recipients.length; i++) {
+      const cleanEmail = recipients[i].toString().trim();
+      if (!cleanEmail || !cleanEmail.includes('@')) continue;
+
+      try {
+        console.log(`[${new Date().toLocaleTimeString()}] Sending Email ${i + 1}/${recipients.length} to: ${cleanEmail}`);
+        
+        if (mailGateway.type === 'aws') {
+          const command = new SendEmailCommand({
+            Source: sender.name ? `${sender.name} <${sender.email}>` : sender.email,
+            Destination: { ToAddresses: [cleanEmail] },
+            Message: {
+              Subject: { Data: subject || 'No Subject' },
+              Body: { Html: { Data: body || '<p>No content</p>' } }
+            }
+          });
+          const resAWS = await mailGateway.client.send(command);
+          if (i === 0) messageId = resAWS.MessageId;
+        } else {
+          // ZEPTOMAIL: Each call is a separate transaction
+          const response = await mailGateway.client.sendMail({
+            from: { address: sender.email, name: sender.name },
+            to: [{ email_address: { address: cleanEmail, name: cleanEmail.split('@')[0] } }],
+            subject: subject || 'No Subject',
+            htmlbody: body || '<p>No content</p>'
+          });
+          if (i === 0) messageId = response.data?.[0]?.message_id || 'N/A';
         }
-      });
-      const resAWS = await mailGateway.client.send(command);
-      messageId = resAWS.MessageId;
-      response = { message: 'AWS Success', data: resAWS };
-    } else {
-      const formattedRecipients = recipients.map(email => ({ email_address: { address: email, name: email.split('@')[0] } }));
-      const mailOptions = {
-        from: { address: sender.email, name: sender.name },
-        to: formattedRecipients,
-        subject: subject || 'No Subject',
-        htmlbody: body || '<p>No content</p>'
-      };
-      response = await mailGateway.client.sendMail(mailOptions);
-      messageId = response.data?.[0]?.message_id || 'N/A';
+        successCount++;
+        // Very small delay to respect provider
+        await new Promise(r => setTimeout(r, 200)); 
+      } catch (err) {
+        console.error(`[ERROR] Failed to send to ${cleanEmail}:`, err.message);
+      }
     }
 
     const log = new EmailLog({
       recipients, subject, body,
-      status: 'success',
+      status: successCount > 0 ? 'success' : 'failed',
       messageId,
       size: emailSize,
       sentBy: req.userId
     });
 
     await log.save();
-    console.log('Email Sent & Logged Successfully');
-    res.status(200).json({ message: 'Emails sent', data: response });
+    console.log(`--- [BATCH COMPLETED: ${new Date().toLocaleTimeString()}] Sent: ${successCount} ---\n`);
+    res.status(200).json({ message: `${successCount} Emails sent privately.`, successCount });
   } catch (error) {
     console.error('CRITICAL ERROR during email send:');
     console.error(error);
@@ -841,24 +870,35 @@ setInterval(async () => {
     if (pending.length > 0) {
       const sender = await getSenderSettings();
       for (const mail of pending) {
+        let mailSuccessCount = 0;
         try {
-          if (mailGateway.type === 'aws') {
-            await mailGateway.client.send(new SendEmailCommand({
-              Source: sender.name ? `${sender.name} <${sender.email}>` : sender.email,
-              Destination: { ToAddresses: mail.recipients },
-              Message: { Subject: { Data: mail.subject }, Body: { Html: { Data: mail.body } } }
-            }));
-          } else {
-            const formatted = mail.recipients.map(e => ({ email_address: { address: e, name: e.split('@')[0] } }));
-            await mailGateway.client.sendMail({
-              from: { address: sender.email, name: sender.name },
-              to: formatted, subject: mail.subject, htmlbody: mail.body
-            });
+          for (const recipient of mail.recipients) {
+            try {
+              if (mailGateway.type === 'aws') {
+                await mailGateway.client.send(new SendEmailCommand({
+                  Source: sender.name ? `${sender.name} <${sender.email}>` : sender.email,
+                  Destination: { ToAddresses: [recipient] },
+                  Message: { Subject: { Data: mail.subject }, Body: { Html: { Data: mail.body } } }
+                }));
+              } else {
+                await mailGateway.client.sendMail({
+                  from: { address: sender.email, name: sender.name },
+                  to: [{ email_address: { address: recipient, name: recipient.split('@')[0] } }], 
+                  subject: mail.subject, 
+                  htmlbody: mail.body
+                });
+              }
+              mailSuccessCount++;
+              await new Promise(r => setTimeout(r, 100)); // Rate limiting
+            } catch (innerErr) {
+              console.error(`[CRON] Failed for ${recipient}:`, innerErr.message);
+            }
           }
-          mail.status = 'sent';
+          mail.status = mailSuccessCount > 0 ? 'sent' : 'failed';
           await mail.save();
-          await new EmailLog({ recipients: mail.recipients, subject: mail.subject, body: mail.body, status: 'success', sentBy: mail.sentBy, sentAt: now }).save();
+          await new EmailLog({ recipients: mail.recipients, subject: mail.subject, body: mail.body, status: mail.status === 'sent' ? 'success' : 'failed', sentBy: mail.sentBy, sentAt: now }).save();
         } catch (err) {
+          console.error('[CRON] Mail processing error:', err.message);
           mail.status = 'failed';
           await mail.save();
         }
