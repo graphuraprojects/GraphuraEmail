@@ -20,7 +20,12 @@ function EmailConfiguration({ token }) {
     AWS_SECRET_KEY: '',
     AWS_REGION: 'us-east-1',
     AWS_SENDER_EMAIL: '',
-    SYSTEM_EMAIL_STATUS: 'active'
+    SYSTEM_EMAIL_STATUS: 'active',
+    SMS_GATEWAY: 'twilio',
+    TWILIO_ACCOUNT_SID: '',
+    TWILIO_AUTH_TOKEN: '',
+    TWILIO_FROM_NUMBER: '',
+    SMSSYNC_SECRET: ''
   });
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -262,6 +267,96 @@ function EmailConfiguration({ token }) {
                 </div>
               </section>
             )}
+          </div>
+
+          {/* SMS Provider Config */}
+          <div className="provider-card">
+            <section className="settings-section">
+              <div className="section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <Shield size={18} />
+                  <h3>SMS Gateway Configuration</h3>
+                </div>
+                <select 
+                  value={settings.SMS_GATEWAY || 'twilio'}
+                  onChange={(e) => {
+                    const newSettings = { ...settings, SMS_GATEWAY: e.target.value };
+                    setSettings(newSettings);
+                    saveSettings(newSettings);
+                  }}
+                  style={{ padding: '0.4rem', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.8rem', fontWeight: 700 }}
+                >
+                  <option value="twilio">Twilio API</option>
+                  <option value="smssync">SMSsync (Android App)</option>
+                </select>
+              </div>
+
+              {settings.SMS_GATEWAY === 'smssync' ? (
+                <div className="form-stack" style={{ marginTop: '1.5rem' }}>
+                  <div className="input-group">
+                    <label>SMSsync Sync URL</label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <input 
+                        type="text" 
+                        readOnly 
+                        value={`${import.meta.env.VITE_API_URL}/api/smssync`} 
+                        style={{ background: '#f8fafc', cursor: 'default' }}
+                      />
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${import.meta.env.VITE_API_URL}/api/smssync`);
+                          alert('URL Copied!');
+                        }}
+                        style={{ padding: '0 1rem', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700 }}
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    <p className="helper-text">Enter this URL in the SMSsync Android app settings.</p>
+                  </div>
+                  <div className="input-group">
+                    <label>SMSsync Secret Key</label>
+                    <input 
+                      type="password" 
+                      value={settings.SMSSYNC_SECRET} 
+                      onChange={(e) => setSettings({ ...settings, SMSSYNC_SECRET: e.target.value })} 
+                      placeholder="Enter secret key" 
+                    />
+                    <p className="helper-text">Must match the "Secret Key" in your Android app.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="form-stack" style={{ marginTop: '1.5rem' }}>
+                  <div className="input-group">
+                    <label>Account SID</label>
+                    <input 
+                      type="text" 
+                      value={settings.TWILIO_ACCOUNT_SID} 
+                      onChange={(e) => setSettings({ ...settings, TWILIO_ACCOUNT_SID: e.target.value })} 
+                      placeholder="AC..." 
+                    />
+                  </div>
+                  <div className="input-group">
+                    <label>Auth Token</label>
+                    <input 
+                      type="password" 
+                      value={settings.TWILIO_AUTH_TOKEN} 
+                      onChange={(e) => setSettings({ ...settings, TWILIO_AUTH_TOKEN: e.target.value })} 
+                      placeholder="Enter token" 
+                    />
+                  </div>
+                  <div className="input-group">
+                    <label>Twilio From Number</label>
+                    <input 
+                      type="text" 
+                      value={settings.TWILIO_FROM_NUMBER} 
+                      onChange={(e) => setSettings({ ...settings, TWILIO_FROM_NUMBER: e.target.value })} 
+                      placeholder="+1234567890" 
+                    />
+                  </div>
+                </div>
+              )}
+            </section>
           </div>
 
           {/* Branding & Global Metadata */}

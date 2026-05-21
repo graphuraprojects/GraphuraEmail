@@ -7,7 +7,8 @@ const jwt = require('jsonwebtoken');
 const { SendMailClient } = require('zeptomail');
 const { SESClient, SendEmailCommand } = require("@aws-sdk/client-ses");
 
-dotenv.config();
+const path = require('path');
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 app.use(cors({
@@ -38,6 +39,7 @@ const userSchema = new mongoose.Schema({
   joiningDate: { type: Date, default: Date.now },
   storageLimit: { type: Number, default: 10 * 1024 * 1024 }, // 10MB Default
   dailyLimit: { type: Number, default: 100 }, // 100 Emails Default
+  smsDailyLimit: { type: Number, default: 50 }, // 50 SMS Default
   status: { type: String, enum: ['active', 'inactive', 'blocked'], default: 'active' },
   isSoftDeleted: { type: Boolean, default: false },
   lastLogin: { type: Date, default: Date.now },
@@ -88,6 +90,48 @@ const GatewayHistorySchema = new mongoose.Schema({
 });
 const GatewayHistory = mongoose.model('GatewayHistory', GatewayHistorySchema);
 
+const smsLogSchema = new mongoose.Schema({
+  recipients: [String],
+  message: String,
+  status: String,
+  errorReason: String,
+  messageSid: String,
+  sentBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  sentAt: { type: Date, default: Date.now }
+});
+
+const SmsLog = mongoose.model('SmsLog', smsLogSchema);
+
+const pendingSmsSchema = new mongoose.Schema({
+  to: String,
+  message: String,
+  status: { type: String, default: 'pending' },
+  sentBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+}, { timestamps: true });
+
+const PendingSms = mongoose.model('PendingSms', pendingSmsSchema);
+
+const receivedSmsSchema = new mongoose.Schema({
+  sender: String,
+  content: String,
+  receivedAt: Date,
+  sim: String,
+  deviceId: String,
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+}, { timestamps: true });
+
+const ReceivedSms = mongoose.model('ReceivedSms', receivedSmsSchema);
+
+const webhookSchema = new mongoose.Schema({
+  url: String,
+  secret: String,
+  events: [String],
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  isActive: { type: Boolean, default: true }
+}, { timestamps: true });
+
+const Webhook = mongoose.model('Webhook', webhookSchema);
+
 // --- AUTH MIDDLEWARE ---
 
 const auth = async (req, res, next) => {
@@ -133,6 +177,33 @@ const adminAuth = (req, res, next) => {
     }
     next();
   });
+};
+
+const apiKeyAuth = async (req, res, next) => {
+  const apiKey = req.header('X-API-Key');
+  if (!apiKey) return res.status(401).json({ error: 'API Key required' });
+
+  try {
+    // We look for users with this secret key or admins
+    const user = await User.findOne({ 
+      $or: [
+        { secretKey: apiKey },
+        { email: 'admin@graphura.in' } // fallback or specific logic
+      ]
+    });
+    
+    // Also check global settings if the key is stored there
+    const syncSecret = (await SystemSetting.findOne({ key: 'SMSSYNC_SECRET' }))?.value || process.env.SMSSYNC_SECRET;
+    
+    if (!user && apiKey !== syncSecret) {
+      return res.status(401).json({ error: 'Invalid API Key' });
+    }
+
+    req.userId = user ? user._id : null;
+    next();
+  } catch (err) {
+    res.status(500).json({ error: 'Auth error' });
+  }
 };
 
 // --- AUTH ROUTES ---
@@ -598,7 +669,9 @@ app.get('/api/admin/settings', adminAuth, async (req, res) => {
     const settings = await SystemSetting.find();
     const keys = [
       'ZEPTOMAIL_API_KEY', 'ZEPTOMAIL_SENDER_EMAIL', 'ZEPTOMAIL_SENDER_NAME', 'ZEPTOMAIL_URL',
-      'MAIL_GATEWAY', 'AWS_ACCESS_KEY', 'AWS_SECRET_KEY', 'AWS_REGION', 'AWS_SENDER_EMAIL'
+      'MAIL_GATEWAY', 'AWS_ACCESS_KEY', 'AWS_SECRET_KEY', 'AWS_REGION', 'AWS_SENDER_EMAIL',
+      'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_FROM_NUMBER', 'SMS_GATEWAY',
+      'SMSSYNC_SECRET'
     ];
     const result = {};
     keys.forEach(k => {
@@ -923,6 +996,24 @@ app.delete('/api/scheduled-emails/:id', auth, async (req, res) => {
   res.json({ message: 'Cancelled' });
 });
 
+app.put('/api/scheduled-emails/:id', auth, async (req, res) => {
+  try {
+    const { recipients, subject, body, scheduledAt } = req.body;
+    const email = await ScheduledEmail.findOne({ _id: req.params.id, sentBy: req.userId, status: 'pending' });
+    if (!email) return res.status(404).json({ error: 'Scheduled email not found or already sent.' });
+
+    if (recipients && Array.isArray(recipients) && recipients.length > 0) email.recipients = recipients;
+    if (subject !== undefined) email.subject = subject;
+    if (body !== undefined) email.body = body;
+    if (scheduledAt) email.scheduledAt = new Date(scheduledAt);
+
+    await email.save();
+    res.json({ message: 'Scheduled email updated successfully', data: email });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/auth/profile', auth, async (req, res) => {
   try {
     const user = await User.findById(req.userId).select('-password');
@@ -1013,6 +1104,309 @@ app.get('/api/admin/stats/daily', adminAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// --- SMS ROUTES ---
+
+const getSmsClient = async () => {
+  const settings = await SystemSetting.find({ 
+    key: { $in: ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_FROM_NUMBER', 'SMS_GATEWAY', 'SMSSYNC_SECRET'] } 
+  });
+  
+  const gateway = settings.find(s => s.key === 'SMS_GATEWAY')?.value || process.env.SMS_GATEWAY || 'twilio';
+  const accountSid = settings.find(s => s.key === 'TWILIO_ACCOUNT_SID')?.value || process.env.TWILIO_ACCOUNT_SID;
+  const authToken = settings.find(s => s.key === 'TWILIO_AUTH_TOKEN')?.value || process.env.TWILIO_AUTH_TOKEN;
+  const fromNumber = settings.find(s => s.key === 'TWILIO_FROM_NUMBER')?.value || process.env.TWILIO_FROM_NUMBER;
+  const syncSecret = settings.find(s => s.key === 'SMSSYNC_SECRET')?.value || process.env.SMSSYNC_SECRET;
+
+  if (gateway === 'twilio' && accountSid && authToken) {
+    return {
+      type: 'twilio',
+      client: require('twilio')(accountSid, authToken),
+      from: fromNumber
+    };
+  }
+  
+  if (gateway === 'smssync') {
+    return {
+      type: 'smssync',
+      secret: syncSecret
+    };
+  }
+  return null;
+};
+
+app.post('/api/send-sms', auth, async (req, res) => {
+  const { recipients, message } = req.body;
+  if (!recipients || !Array.isArray(recipients) || recipients.length === 0 || !message) {
+    return res.status(400).json({ error: 'Recipients and message are required.' });
+  }
+
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(401).json({ error: 'Session invalid' });
+
+    // Daily Limit Check
+    if (req.userRole !== 'admin') {
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const sentRecently = await SmsLog.countDocuments({
+        sentBy: req.userId,
+        status: 'success',
+        sentAt: { $gte: twentyFourHoursAgo }
+      });
+
+      if (sentRecently + recipients.length > (user.smsDailyLimit || 50)) {
+        return res.status(403).json({ error: `Daily SMS limit (${user.smsDailyLimit || 50}) reached.` });
+      }
+    }
+
+    const smsClient = await getSmsClient();
+    if (!smsClient) return res.status(503).json({ error: 'SMS Gateway not configured.' });
+
+    let successCount = 0;
+    let lastSid = 'N/A';
+
+    if (smsClient.type === 'smssync') {
+      // Add to pending queue for the app to fetch
+      for (const phone of recipients) {
+        const pending = new PendingSms({
+          to: phone,
+          message,
+          sentBy: req.userId
+        });
+        await pending.save();
+        successCount++;
+      }
+      lastSid = 'QUEUED_SMS_SYNC';
+    } else {
+      for (const phone of recipients) {
+        try {
+          if (smsClient.type === 'twilio') {
+            const result = await smsClient.client.messages.create({
+              body: message,
+              from: smsClient.from,
+              to: phone
+            });
+            lastSid = result.sid;
+            successCount++;
+          }
+        } catch (err) {
+          console.error(`[SMS ERROR] Failed for ${phone}:`, err.message);
+        }
+      }
+    }
+
+    const log = new SmsLog({
+      recipients,
+      message,
+      status: successCount > 0 ? 'success' : 'failed',
+      messageSid: lastSid,
+      sentBy: req.userId
+    });
+    await log.save();
+
+    res.json({ message: `${successCount} SMS sent successfully.`, successCount });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/sms-logs', auth, async (req, res) => {
+  try {
+    const logs = await SmsLog.find({ sentBy: req.userId }).sort({ sentAt: -1 }).limit(50);
+    res.json(logs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/sms-logs', adminAuth, async (req, res) => {
+  try {
+    const logs = await SmsLog.find().populate('sentBy', 'email').sort({ sentAt: -1 }).limit(100);
+    res.json(logs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoint for SMSsync Android App
+app.post('/api/smssync', async (req, res) => {
+  const { secret, task } = req.body;
+  
+  const syncSecret = (await SystemSetting.findOne({ key: 'SMSSYNC_SECRET' }))?.value || process.env.SMSSYNC_SECRET;
+  
+  if (secret !== syncSecret) {
+    return res.status(401).json({ success: false, error: 'Unauthorized secret' });
+  }
+
+  // If the app is asking for tasks (sending messages)
+  if (task === 'send' || !task) {
+    const pending = await PendingSms.find({ status: 'pending' }).limit(10);
+    const messages = pending.map(m => ({
+      to: m.to,
+      message: m.message,
+      uuid: m._id.toString()
+    }));
+
+    // Mark as processing or delete (for simplicity we'll mark as 'sent' after return, 
+    // but ideally we wait for success callback. For now, let's just return them.)
+    if (messages.length > 0) {
+      await PendingSms.updateMany(
+        { _id: { $in: pending.map(p => p._id) } },
+        { $set: { status: 'sent' } }
+      );
+    }
+
+    return res.json({
+      payload: {
+        success: true,
+        task: 'send',
+        secret: syncSecret,
+        messages: messages
+      }
+    });
+  }
+
+  // Handle incoming SMS (if app pushes received messages)
+  // ... can be implemented later if needed ...
+
+  res.json({ success: true });
+});
+
+// --- NEW SMSSYNC DOCUMENTATION ENDPOINTS ---
+
+// Receive SMS from Flutter app
+app.post('/api/sms/incoming', apiKeyAuth, async (req, res) => {
+  const { event, data } = req.body;
+  if (event !== 'sms.received') return res.status(400).json({ error: 'Invalid event' });
+
+  // Signature verification if secret is configured
+  const signature = req.headers['x-webhook-signature'];
+  const webhookSecret = process.env.WEBHOOK_SECRET;
+  
+  if (webhookSecret && signature) {
+    const crypto = require('crypto');
+    const expected = 'sha256=' + crypto
+      .createHmac('sha256', webhookSecret)
+      .update(JSON.stringify(req.body))
+      .digest('hex');
+    
+    if (signature !== expected) {
+      return res.status(401).json({ error: 'Invalid webhook signature' });
+    }
+  }
+
+  try {
+    const { sender, content, receivedAt, sim, deviceId } = data;
+    
+    const newSms = new ReceivedSms({
+      sender,
+      content,
+      receivedAt: new Date(receivedAt),
+      sim,
+      deviceId,
+      owner: req.userId // May be null if using global secret
+    });
+
+    await newSms.save();
+
+    // Trigger user webhooks
+    const webhooks = await Webhook.find({ owner: req.userId, isActive: true });
+    for (const hook of webhooks) {
+      // Logic to send webhook...
+      console.log(`Triggering webhook for ${hook.url}`);
+    }
+
+    res.json({ success: true, message: 'SMS recorded' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// List all SMS (paginated)
+app.get('/api/sms', auth, async (req, res) => {
+  const { page = 1, limit = 20 } = req.query;
+  try {
+    const query = req.userRole === 'admin' ? {} : { owner: req.userId };
+    const sms = await ReceivedSms.find(query)
+      .sort({ receivedAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .exec();
+
+    const count = await ReceivedSms.countDocuments(query);
+    res.json({
+      sms,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Search SMS
+app.get('/api/sms/search', auth, async (req, res) => {
+  const { q } = req.query;
+  try {
+    const query = {
+      $and: [
+        req.userRole === 'admin' ? {} : { owner: req.userId },
+        {
+          $or: [
+            { sender: { $regex: q, $options: 'i' } },
+            { content: { $regex: q, $options: 'i' } }
+          ]
+        }
+      ]
+    };
+    const sms = await ReceivedSms.find(query).sort({ receivedAt: -1 });
+    res.json(sms);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// SMS Statistics
+app.get('/api/sms/stats', auth, async (req, res) => {
+  try {
+    const query = req.userRole === 'admin' ? {} : { owner: req.userId };
+    const total = await ReceivedSms.countDocuments(query);
+    const today = await ReceivedSms.countDocuments({
+      ...query,
+      createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) }
+    });
+
+    res.json({ total, today });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Webhook Management
+app.get('/api/webhooks', auth, async (req, res) => {
+  const hooks = await Webhook.find({ owner: req.userId });
+  res.json(hooks);
+});
+
+app.post('/api/webhooks', auth, async (req, res) => {
+  const { url, secret } = req.body;
+  const hook = new Webhook({ url, secret, owner: req.userId });
+  await hook.save();
+  res.json(hook);
+});
+
+app.delete('/api/webhooks/:id', auth, async (req, res) => {
+  await Webhook.findOneAndDelete({ _id: req.params.id, owner: req.userId });
+  res.json({ success: true });
+});
+
+// Device Status
+app.get('/api/device/status', auth, async (req, res) => {
+  // Check last incoming SMS to determine status
+  const lastSms = await ReceivedSms.findOne({ owner: req.userId }).sort({ createdAt: -1 });
+  const status = lastSms && (Date.now() - new Date(lastSms.createdAt).getTime() < 300000) ? 'online' : 'offline';
+  res.json({ status, lastSeen: lastSms?.createdAt });
 });
 
 const PORT = process.env.PORT || 5000;

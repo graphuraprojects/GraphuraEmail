@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Lock, Loader2, CheckCircle2, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Lock, Loader2, CheckCircle2, AlertCircle, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const API_URL = `${import.meta.env.VITE_API_URL}/api/auth`;
@@ -10,6 +10,8 @@ function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
+  const [showPass, setShowPass] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const token = new URLSearchParams(location.search).get('token');
@@ -34,14 +36,24 @@ function ResetPassword() {
 
     try {
       await axios.post(`${API_URL}/reset-password`, { token, password });
-      setStatus({ type: 'success', message: 'Security credentials updated successfully. You can now log in.' });
+      setStatus({ type: 'success', message: 'Credentials updated successfully. Redirecting...' });
       setTimeout(() => navigate('/login'), 3000);
     } catch (err) {
-      setStatus({ type: 'error', message: err.response?.data?.error || 'Failed to reset password. Link may be expired.' });
+      setStatus({ type: 'error', message: err.response?.data?.error || 'Failed to reset. Link may be expired.' });
     } finally {
       setLoading(false);
     }
   };
+
+  const inputContainerStyle = { position: 'relative', marginBottom: '1.25rem' };
+  const inputStyle = {
+    width: '100%', height: '3.25rem', paddingLeft: '44px', paddingRight: '44px',
+    borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)',
+    fontSize: '0.9rem', outline: 'none', background: 'rgba(255,255,255,0.04)',
+    color: '#e2e8f0', fontFamily: 'inherit', transition: 'all 0.2s'
+  };
+  const iconStyle = { position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.2)' };
+  const toggleStyle = { position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(255,255,255,0.15)', cursor: 'pointer', padding: '4px', width: 'auto', boxShadow: 'none' };
 
   return (
     <div style={{
@@ -50,113 +62,131 @@ function ResetPassword() {
       alignItems: 'center',
       justifyContent: 'center',
       padding: '2rem',
-      background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-      fontFamily: "'Inter', sans-serif"
+      background: '#080a10',
+      fontFamily: "'Outfit', sans-serif",
+      position: 'relative',
+      overflow: 'hidden'
     }}>
+      {/* Background orbs */}
+      <div style={{ position: 'absolute', top: '15%', right: '20%', width: '350px', height: '350px', background: 'radial-gradient(circle, rgba(99,102,241,0.07) 0%, transparent 70%)', borderRadius: '50%', pointerEvents: 'none' }}></div>
+      <div style={{ position: 'absolute', bottom: '15%', left: '15%', width: '280px', height: '280px', background: 'radial-gradient(circle, rgba(139,92,246,0.05) 0%, transparent 70%)', borderRadius: '50%', pointerEvents: 'none' }}></div>
+
       <div style={{
-        maxWidth: '400px',
+        maxWidth: '420px',
         width: '100%',
-        background: '#fff',
-        padding: '3rem 2.5rem',
-        borderRadius: '28px',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-        textAlign: 'center'
+        background: 'rgba(255,255,255,0.03)',
+        backdropFilter: 'blur(20px)',
+        padding: '2.5rem',
+        borderRadius: '20px',
+        border: '1px solid rgba(255,255,255,0.06)',
+        boxShadow: '0 25px 60px rgba(0, 0, 0, 0.5)',
+        textAlign: 'center',
+        position: 'relative'
       }}>
-        <div style={{ marginBottom: '2.5rem' }}>
-          <div style={{ 
-            width: '64px', height: '64px', background: '#f1f5f9', color: '#0f172a', 
-            borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 1.5rem auto'
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1px', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)' }}></div>
+
+        <div style={{ marginBottom: '2rem' }}>
+          <div style={{
+            width: '60px', height: '60px',
+            background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.1))',
+            color: '#818cf8', borderRadius: '16px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 1.25rem auto',
+            border: '1px solid rgba(99,102,241,0.15)'
           }}>
-            <ShieldCheck size={32} />
+            <ShieldCheck size={28} />
           </div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>Secure Reset</h1>
-          <p style={{ color: '#64748b', fontSize: '0.9rem' }}>Define your new professional access credentials below.</p>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>Secure Reset</h1>
+          <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.875rem' }}>Define your new access credentials below.</p>
         </div>
 
         {status && (
           <div style={{
-            padding: '1rem',
-            borderRadius: '12px',
-            marginBottom: '1.5rem',
-            fontSize: '0.875rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            textAlign: 'left',
-            background: status.type === 'success' ? '#f0fdf4' : '#fef2f2',
-            color: status.type === 'success' ? '#166534' : '#991b1b',
-            border: `1px solid ${status.type === 'success' ? '#bbf7d0' : '#fecaca'}`
+            padding: '0.875rem 1rem', borderRadius: '12px', marginBottom: '1.25rem',
+            fontSize: '0.85rem', fontWeight: 600,
+            display: 'flex', alignItems: 'center', gap: '0.6rem', textAlign: 'left',
+            background: status.type === 'success' ? 'rgba(16,185,129,0.08)' : 'rgba(244,63,94,0.08)',
+            color: status.type === 'success' ? '#34d399' : '#fb7185',
+            border: `1px solid ${status.type === 'success' ? 'rgba(16,185,129,0.15)' : 'rgba(244,63,94,0.15)'}`
           }}>
-            {status.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+            {status.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
             {status.message}
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '1.25rem', textAlign: 'left' }}>
-            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem', display: 'block' }}>New Password</label>
-            <div style={{ position: 'relative' }}>
-              <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-              <input
-                type="password"
-                required
-                placeholder="••••••••"
-                style={{
-                  width: '100%', height: '3.25rem', paddingLeft: '42px', borderRadius: '12px',
-                  border: '1px solid #e2e8f0', fontSize: '0.9375rem', outline: 'none'
-                }}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+        <form onSubmit={handleSubmit} style={{ textAlign: 'left' }}>
+          <div>
+            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.35)', marginBottom: '0.5rem', display: 'block', textTransform: 'uppercase', letterSpacing: '0.06em' }}>New Password</label>
+            <div style={inputContainerStyle}>
+              <Lock size={16} style={iconStyle} />
+              <input type={showPass ? "text" : "password"} required placeholder="••••••••" style={inputStyle}
+                value={password} onChange={(e) => setPassword(e.target.value)}
+                onFocus={e => { e.target.style.borderColor = 'rgba(99,102,241,0.4)'; e.target.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)'; }}
+                onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none'; }}
               />
+              <button type="button" onClick={() => setShowPass(!showPass)} style={toggleStyle}>
+                {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
             </div>
           </div>
 
-          <div style={{ marginBottom: '2rem', textAlign: 'left' }}>
-            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem', display: 'block' }}>Confirm New Password</label>
-            <div style={{ position: 'relative' }}>
-              <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-              <input
-                type="password"
-                required
-                placeholder="••••••••"
-                style={{
-                  width: '100%', height: '3.25rem', paddingLeft: '42px', borderRadius: '12px',
-                  border: '1px solid #e2e8f0', fontSize: '0.9375rem', outline: 'none'
-                }}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+          <div>
+            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.35)', marginBottom: '0.5rem', display: 'block', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Confirm Password</label>
+            <div style={inputContainerStyle}>
+              <Lock size={16} style={iconStyle} />
+              <input type={showConfirm ? "text" : "password"} required placeholder="••••••••" style={inputStyle}
+                value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
+                onFocus={e => { e.target.style.borderColor = 'rgba(99,102,241,0.4)'; e.target.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)'; }}
+                onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none'; }}
               />
+              <button type="button" onClick={() => setShowConfirm(!showConfirm)} style={toggleStyle}>
+                {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading || !token}
-            style={{
-              width: '100%', height: '3.5rem', background: '#0f172a', color: '#fff',
-              border: 'none', borderRadius: '14px', fontWeight: 700, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem',
-              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-              boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.3)'
-            }}
-            onMouseOver={(e) => {
-              if (!loading && token) {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(15, 23, 42, 0.4)';
-                e.currentTarget.style.background = '#1e293b';
-              }
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(15, 23, 42, 0.3)';
-              e.currentTarget.style.background = '#0f172a';
-            }}
-          >
-            {loading ? <Loader2 className="animate-spin" size={20} /> : 'Finalize Password Update'}
+          {/* Password strength hint */}
+          {password && (
+            <div style={{ marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', gap: '4px', marginBottom: '0.4rem' }}>
+                {[1,2,3,4].map(i => (
+                  <div key={i} style={{
+                    flex: 1, height: '3px', borderRadius: '3px',
+                    background: password.length >= i * 3
+                      ? (password.length >= 12 ? '#34d399' : password.length >= 8 ? '#fbbf24' : '#fb7185')
+                      : 'rgba(255,255,255,0.06)',
+                    transition: 'all 0.3s'
+                  }}></div>
+                ))}
+              </div>
+              <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.25)', fontWeight: 600 }}>
+                {password.length < 6 ? 'Too short' : password.length < 8 ? 'Weak' : password.length < 12 ? 'Good' : 'Strong'}
+              </span>
+            </div>
+          )}
+
+          <button type="submit" disabled={loading || !token} className="rp-btn-primary" style={{
+            width: '100%', height: '3.25rem',
+            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff',
+            border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer',
+            fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+            boxShadow: '0 8px 20px rgba(99,102,241,0.3)',
+            opacity: (!token) ? 0.5 : 1
+          }}>
+            {loading ? <Loader2 className="animate-spin" size={18} /> : 'Update Password'}
           </button>
         </form>
       </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        .rp-btn-primary {
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        .rp-btn-primary:hover:not(:disabled) {
+          transform: translateY(-2px) !important;
+          box-shadow: 0 12px 28px rgba(99,102,241,0.4) !important;
+        }
+      `}} />
     </div>
   );
 }

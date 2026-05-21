@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom';
 import {
   Users, Shield, Trash2, Search, Mail, Settings, Save, Globe, Lock, UserCircle,
   CheckCircle2, AlertCircle, Loader2,
-  Ban, Check, Edit2, HardDrive, Zap, X, TrendingUp, LogIn, Eye, Plus, RefreshCw
+  Ban, Check, Edit2, HardDrive, Zap, X, TrendingUp, LogIn, Eye, Plus, RefreshCw, MessageSquare
 } from 'lucide-react';
 
 const API_URL = `${import.meta.env.VITE_API_URL}/api/admin`;
@@ -166,25 +166,15 @@ function AdminDashboard({ token }) {
 
   if (error) {
     return (
-      <div style={{ padding: '4rem 2rem', textAlign: 'center', background: '#fff', borderRadius: '24px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', margin: '2rem' }}>
-        <div style={{ width: '80px', height: '80px', background: '#fef2f2', color: '#dc2626', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem auto' }}>
+      <div style={{ padding: '4rem 2rem', textAlign: 'center', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border)', margin: '2rem' }}>
+        <div style={{ width: '80px', height: '80px', background: 'rgba(244,63,94,0.1)', color: '#fb7185', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem auto' }}>
           <AlertCircle size={40} />
         </div>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#111827', marginBottom: '0.5rem' }}>Connection Failed</h2>
-        <p style={{ color: '#6b7280', marginBottom: '2rem' }}>{error}</p>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>Connection Failed</h2>
+        <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>{error}</p>
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-          <button
-            onClick={fetchData}
-            style={{ padding: '0.75rem 2rem', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)' }}
-          >
-            Retry Connection
-          </button>
-          <button
-            onClick={() => window.location.href = '/dashboard'}
-            style={{ padding: '0.75rem 2rem', background: '#f3f4f6', color: '#4b5563', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
-          >
-            Back to User Dashboard
-          </button>
+          <button onClick={fetchData} style={{ padding: '0.75rem 2rem', background: 'var(--gradient-primary)', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(99,102,241,0.3)' }}>Retry Connection</button>
+          <button onClick={() => window.location.href = '/dashboard'} style={{ padding: '0.75rem 2rem', background: 'rgba(255,255,255,0.04)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}>Back to Dashboard</button>
         </div>
       </div>
     );
@@ -199,7 +189,7 @@ function AdminDashboard({ token }) {
   }
 
   return (
-    <div className="admin-container animate-fade-in" style={{ padding: '2.5rem', minHeight: '100vh', background: '#f8fafc', color: '#1e293b', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <div className="admin-container animate-fade-in" style={{ padding: '0', minHeight: '100vh', color: 'var(--text-main)', fontFamily: "'Outfit', sans-serif" }}>
       {/* Stats Cards */}
       <div className="stats-grid" style={{
         display: 'grid',
@@ -208,48 +198,48 @@ function AdminDashboard({ token }) {
         marginBottom: '2rem'
       }}>
         {/* Total Users */}
-        <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.04)' }}>
+        <div style={{ background: 'var(--bg-card)', padding: '1.5rem', borderRadius: '16px', border: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem' }}>
-            <div style={{ padding: '12px', background: '#eef2ff', color: '#6366f1', borderRadius: '14px' }}>
+            <div style={{ padding: '12px', background: 'rgba(99,102,241,0.12)', color: '#818cf8', borderRadius: '12px' }}>
               <Users size={22} />
             </div>
-            <span style={{ color: '#64748b', fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.025em' }}>User Registry</span>
+            <span style={{ color: 'var(--text-muted)', fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>User Registry</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-            <div style={{ fontSize: '2rem', fontWeight: 900, color: '#0f172a' }}>{stats?.users?.total || 0}</div>
-            <div style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 600 }}>{stats?.users?.active || 0} active</div>
+            <div style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-main)' }}>{stats?.users?.total || 0}</div>
+            <div style={{ fontSize: '0.8rem', color: '#34d399', fontWeight: 600 }}>{stats?.users?.active || 0} active</div>
           </div>
         </div>
 
         {/* Global Traffic */}
-        <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.04)' }}>
+        <div style={{ background: 'var(--bg-card)', padding: '1.5rem', borderRadius: '16px', border: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem' }}>
-            <div style={{ padding: '12px', background: '#ecfdf5', color: '#10b981', borderRadius: '14px' }}>
+            <div style={{ padding: '12px', background: 'rgba(16,185,129,0.12)', color: '#34d399', borderRadius: '12px' }}>
               <Mail size={22} />
             </div>
-            <span style={{ color: '#64748b', fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.025em' }}>Email Volume</span>
+            <span style={{ color: 'var(--text-muted)', fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Email Volume</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-            <div style={{ fontSize: '2rem', fontWeight: 900, color: '#0f172a' }}>{stats?.emails?.totalSent || 0}</div>
-            <div style={{ fontSize: '0.8rem', color: '#6366f1', fontWeight: 600 }}>{stats?.emails?.successCount || 0} success</div>
+            <div style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-main)' }}>{stats?.emails?.totalSent || 0}</div>
+            <div style={{ fontSize: '0.8rem', color: '#818cf8', fontWeight: 600 }}>{stats?.emails?.successCount || 0} success</div>
           </div>
         </div>
 
         {/* Storage */}
-        <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.04)' }}>
+        <div style={{ background: 'var(--bg-card)', padding: '1.5rem', borderRadius: '16px', border: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem' }}>
-            <div style={{ padding: '12px', background: '#fff7ed', color: '#f59e0b', borderRadius: '14px' }}>
+            <div style={{ padding: '12px', background: 'rgba(245,158,11,0.12)', color: '#fbbf24', borderRadius: '12px' }}>
               <HardDrive size={22} />
             </div>
-            <span style={{ color: '#64748b', fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.025em' }}>Cloud Storage</span>
+            <span style={{ color: 'var(--text-muted)', fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Cloud Storage</span>
           </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a' }}>{formatBytes(stats?.emails?.totalSize || 0)}</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-main)' }}>{formatBytes(stats?.emails?.totalSize || 0)}</div>
         </div>
 
         {/* ZeptoMail Balance - Premium Dark Card */}
         <div style={{
-          background: '#0f172a', padding: '1.5rem', borderRadius: '24px', color: '#fff',
-          boxShadow: '0 20px 25px -5px rgba(15, 23, 42, 0.2)', position: 'relative', overflow: 'hidden',
+          background: 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, var(--bg-card) 100%)', padding: '1.5rem', borderRadius: '16px', color: '#fff',
+          border: '1px solid rgba(99,102,241,0.2)', position: 'relative', overflow: 'hidden',
           display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
         }}>
           <div style={{ position: 'absolute', top: 0, right: 0, width: '120px', height: '120px', background: 'radial-gradient(circle, rgba(251,191,36,0.1) 0%, transparent 70%)', zIndex: 0 }}></div>
@@ -315,9 +305,10 @@ function AdminDashboard({ token }) {
             fontSize: '0.875rem',
             border: 'none',
             cursor: 'pointer',
-            background: activeTab === 'users' ? '#4f46e5' : '#fff',
-            color: activeTab === 'users' ? '#fff' : '#6b7280',
-            boxShadow: activeTab === 'users' ? '0 4px 12px rgba(79, 70, 229, 0.3)' : '0 1px 3px rgba(0,0,0,0.1)'
+            background: activeTab === 'users' ? 'var(--primary)' : 'rgba(255,255,255,0.04)',
+            color: activeTab === 'users' ? '#fff' : 'var(--text-muted)',
+            boxShadow: activeTab === 'users' ? '0 4px 12px rgba(99,102,241,0.3)' : 'none',
+            border: activeTab === 'users' ? 'none' : '1px solid var(--border)'
           }}
         >
           User Management
@@ -331,9 +322,10 @@ function AdminDashboard({ token }) {
             fontSize: '0.875rem',
             border: 'none',
             cursor: 'pointer',
-            background: activeTab === 'activity' ? '#4f46e5' : '#fff',
-            color: activeTab === 'activity' ? '#fff' : '#6b7280',
-            boxShadow: activeTab === 'activity' ? '0 4px 12px rgba(79, 70, 229, 0.3)' : '0 1px 3px rgba(0,0,0,0.1)'
+            background: activeTab === 'activity' ? 'var(--primary)' : 'rgba(255,255,255,0.04)',
+            color: activeTab === 'activity' ? '#fff' : 'var(--text-muted)',
+            boxShadow: activeTab === 'activity' ? '0 4px 12px rgba(99,102,241,0.3)' : 'none',
+            border: activeTab === 'activity' ? 'none' : '1px solid var(--border)'
           }}
         >
           Platform Activity
@@ -343,11 +335,11 @@ function AdminDashboard({ token }) {
       {/* Filters & Search */}
       <div className="filters-container" style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
         <div className="search-wrapper" style={{ position: 'relative', flex: 1, minWidth: '300px' }}>
-          <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+          <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
           <input
             type="text"
             placeholder="Search by name, email or domain..."
-            style={{ paddingLeft: '40px', width: '100%', height: '2.75rem', borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: '0.875rem', outline: 'none' }}
+            style={{ paddingLeft: '40px', width: '100%', height: '2.75rem', borderRadius: '12px', border: '1px solid var(--border)', fontSize: '0.875rem', outline: 'none', background: 'var(--bg-card)', color: 'var(--text-main)' }}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -356,7 +348,7 @@ function AdminDashboard({ token }) {
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            style={{ height: '2.75rem', padding: '0 1rem', borderRadius: '12px', border: '1px solid #e5e7eb', outline: 'none', fontSize: '0.875rem' }}
+            style={{ height: '2.75rem', padding: '0 1rem', borderRadius: '12px', border: '1px solid var(--border)', outline: 'none', fontSize: '0.875rem', background: 'var(--bg-card)', color: 'var(--text-main)' }}
           >
             <option value="all">All Roles</option>
             <option value="admin">Admin</option>
@@ -367,7 +359,7 @@ function AdminDashboard({ token }) {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            style={{ height: '2.75rem', padding: '0 1rem', borderRadius: '12px', border: '1px solid #e5e7eb', outline: 'none', fontSize: '0.875rem' }}
+            style={{ height: '2.75rem', padding: '0 1rem', borderRadius: '12px', border: '1px solid var(--border)', outline: 'none', fontSize: '0.875rem', background: 'var(--bg-card)', color: 'var(--text-main)' }}
           >
             <option value="all">All Status</option>
             <option value="active">Active</option>
@@ -377,7 +369,7 @@ function AdminDashboard({ token }) {
         </div>
         <button
           onClick={() => setIsAddModalOpen(true)}
-          style={{ height: '2.75rem', padding: '0 1.5rem', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          style={{ height: '2.75rem', padding: '0 1.5rem', background: 'var(--gradient-primary)', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 4px 12px rgba(99,102,241,0.25)', width: 'auto' }}
         >
           <Users size={18} /> Add User
         </button>
@@ -385,10 +377,10 @@ function AdminDashboard({ token }) {
 
       {/* Content Section */}
       {activeTab === 'users' ? (
-        <div style={{ background: '#fff', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-          <div style={{ padding: '1.5rem', borderBottom: '1px solid #f3f4f6' }}>
-            <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#111827' }}>Core User Management</h2>
-            <p style={{ margin: '0.25rem 0 0 0', color: '#6b7280', fontSize: '0.875rem' }}>Full control over organization users, roles, and email limits</p>
+        <div style={{ background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+          <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)' }}>
+            <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)' }}>Core User Management</h2>
+            <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Full control over organization users, roles, and email limits</p>
           </div>
 
           <div style={{ overflowX: 'auto' }}>
@@ -444,6 +436,7 @@ function AdminDashboard({ token }) {
                       </td>
                       <td style={{ padding: '1.25rem 1.5rem', fontSize: '0.8125rem' }}>
                         <div style={{ color: '#374151', display: 'flex', alignItems: 'center', gap: '4px' }}><Zap size={12} /> {user.sentToday || 0}/{user.dailyLimit}</div>
+                        <div style={{ color: '#374151', display: 'flex', alignItems: 'center', gap: '4px' }}><MessageSquare size={12} /> {user.smsDailyLimit || 50} Limit</div>
                         <div style={{ color: '#374151', display: 'flex', alignItems: 'center', gap: '4px' }}><HardDrive size={12} /> {formatBytes(user.totalUsedStorage || 0)}</div>
                       </td>
                       <td style={{ padding: '1.25rem 1.5rem', textAlign: 'right' }}>
@@ -756,6 +749,12 @@ function AdminDashboard({ token }) {
                   <input type="number" style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} value={(editingUser.storageLimit / (1024 * 1024)).toFixed(0)} onChange={e => setEditingUser({ ...editingUser, storageLimit: parseInt(e.target.value) * 1024 * 1024 })} />
                 </div>
               </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#4b5563', marginBottom: '0.5rem' }}>SMS Daily Limit</label>
+                  <input type="number" style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} value={editingUser.smsDailyLimit || 50} onChange={e => setEditingUser({ ...editingUser, smsDailyLimit: parseInt(e.target.value) })} />
+                </div>
+              </div>
               <button
                 onClick={() => handleUpdateUser(editingUser._id, editingUser)}
                 style={{ marginTop: '1rem', padding: '0.875rem', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
@@ -806,8 +805,8 @@ function AdminDashboard({ token }) {
           width: 36px;
           height: 36px;
           border-radius: 10px;
-          border: 1px solid #e5e7eb;
-          background: #fff;
+          border: 1px solid var(--border);
+          background: rgba(255,255,255,0.04);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -815,64 +814,33 @@ function AdminDashboard({ token }) {
           transition: all 0.2s;
         }
         .admin-action-btn:hover:not(:disabled) {
-          background: #f9fafb;
+          background: rgba(255,255,255,0.08);
           transform: translateY(-1px);
-          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
         .admin-action-btn:disabled {
           opacity: 0.4;
           cursor: not-allowed;
         }
-
-        /* Responsive Design */
+        .admin-container table th { background: rgba(255,255,255,0.02); color: var(--text-muted); }
+        .admin-container table td { color: var(--text-soft); border-bottom-color: var(--border); }
+        .admin-container table tr { border-bottom-color: var(--border); }
+        .admin-container table tr:hover td { background: rgba(255,255,255,0.02); }
         @media (max-width: 1024px) {
-          .stats-grid {
-            grid-template-columns: repeat(2, 1fr) !important;
-          }
+          .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
         }
-
         @media (max-width: 768px) {
-          .stats-grid {
-            grid-template-columns: 1fr !important;
-          }
-          .admin-header {
-            flex-direction: column;
-            align-items: flex-start !important;
-            gap: 1.5rem;
-          }
-          .filters-container {
-            flex-direction: column;
-            align-items: stretch !important;
-          }
-          .search-wrapper {
-            width: 100% !important;
-          }
-          .filter-group {
-            width: 100%;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.5rem;
-          }
-          .filter-group select {
-            width: 100% !important;
-          }
-          .modal-content {
-            width: 95% !important;
-            padding: 1.5rem !important;
-          }
+          .stats-grid { grid-template-columns: 1fr !important; }
+          .admin-header { flex-direction: column; align-items: flex-start !important; gap: 1.5rem; }
+          .filters-container { flex-direction: column; align-items: stretch !important; }
+          .search-wrapper { width: 100% !important; }
+          .filter-group { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+          .filter-group select { width: 100% !important; }
+          .modal-content { width: 95% !important; padding: 1.5rem !important; }
         }
-
         @media (max-width: 480px) {
-          .admin-container {
-            padding: 1rem !important;
-          }
-          .tab-nav {
-            width: 100%;
-            flex-direction: column;
-          }
-          .tab-nav button {
-            width: 100%;
-          }
+          .admin-container { padding: 1rem !important; }
+          .tab-nav { width: 100%; flex-direction: column; }
+          .tab-nav button { width: 100%; }
         }
       `}} />
     </div>
